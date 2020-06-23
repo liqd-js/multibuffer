@@ -261,6 +261,7 @@ describe( 'Tests', ( done ) =>
             let needle = data.slice( index, length );
             let data_index = data.indexOf( needle, offset );
             let buff_index = multibuffer.indexOf( needle, offset );
+            let partial_index = multibuffer.partialIndexOf( needle, offset );
 
             if( data_index !== buff_index )
             {
@@ -268,13 +269,24 @@ describe( 'Tests', ( done ) =>
 
                 assert.fail( 'MultiBuffer is not searched properly' );
             }
+
+            if( buff_index !== partial_index )
+            {
+                if( buff_index !== -1 || !multibuffer.equals( needle, partial_index, multibuffer.length - partial_index ))
+                {
+                    console.log({ needle, offset, buff_index, partial_index, length: multibuffer.length, len: multibuffer.length - partial_index });
+                    console.log({ tail: Buffer.concat( multibuffer.slice( partial_index ))});
+
+                    assert.fail( 'MultiBuffer partialIndexOf not working properly' );
+                }
+            }
         }
 
         assert.ok( multibuffer.length === data.length && multibuffer.slice(0).length === blocks && Slice( multibuffer ) === data.toString('utf8'), 'MultiBuffer is not searched properly' );
 	})
     .timeout( 30000 );
 
-    it('should find position with indexOf  with string needle', function()
+    it('should find position with indexOf with string needle', function()
 	{
 		const blocks = 10, multibuffer = new MultiBuffer(), data = FillBuffer( multibuffer, blocks, 10 );
 
@@ -286,12 +298,24 @@ describe( 'Tests', ( done ) =>
             let needle = data.substr( index, length );
             let data_index = data.indexOf( needle, offset );
             let buff_index = multibuffer.indexOf( needle, offset, 'utf8' );
+            let partial_index = multibuffer.partialIndexOf( needle, offset, 'utf8' );
 
             if( data_index !== buff_index )
             {
                 console.log({ data_index, buff_index, index, offset, needle: needle.toString('utf8'), data: data.toString('utf8'), buffer: multibuffer.slice(0).map( b => b.toString() ) });
 
                 assert.fail( 'MultiBuffer is not searched properly' );
+            }
+
+            if( buff_index !== partial_index )
+            {
+                if( buff_index !== -1 || !multibuffer.equals( Buffer.from( needle, 'utf8' ), partial_index, multibuffer.length - partial_index ))
+                {
+                    console.log({ needle, offset, buff_index, partial_index, length: multibuffer.length, len: multibuffer.length - partial_index });
+                    console.log({ tail: Buffer.concat( multibuffer.slice( partial_index ))});
+
+                    assert.fail( 'MultiBuffer partialIndexOf not working properly' );
+                }
             }
         }
 
@@ -325,6 +349,11 @@ describe( 'Tests', ( done ) =>
         assert.ok( multibuffer.indexOf( '', 3 ) === 3, 'MultiBuffer is not searched properly' );
         assert.ok( multibuffer.indexOf( '' ) === 0, 'MultiBuffer is not searched properly' );
         assert.ok( multibuffer.indexOf( '', 20 ) === -1, 'MultiBuffer is not searched properly' );
+        assert.ok( multibuffer.partialIndexOf( '9', 'utf8' ) === 9, 'MultiBuffer is not searched properly' );
+        assert.ok( multibuffer.partialIndexOf( '9', 20 ) === -1, 'MultiBuffer is not searched properly' );
+        assert.ok( multibuffer.partialIndexOf( '', 3 ) === 3, 'MultiBuffer is not searched properly' );
+        assert.ok( multibuffer.partialIndexOf( '' ) === 0, 'MultiBuffer is not searched properly' );
+        assert.ok( multibuffer.partialIndexOf( '', 20 ) === -1, 'MultiBuffer is not searched properly' );
         assert.ok( Splice( multibuffer, 0, 10, Buffer.from('abcdef', 'utf8')) === '0123456789' && Slice( multibuffer ) === 'abcdef' );
         assert.ok( Splice( multibuffer, -1, Buffer.from( 'ghi' )) === '' && Slice( multibuffer ) === 'abcdeghif' );
         assert.ok( Splice( multibuffer ) === 'abcdeghif' && Slice( multibuffer ) === '' );
