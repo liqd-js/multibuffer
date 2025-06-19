@@ -1,26 +1,27 @@
-'use strict';
-
-module.exports = class MultiBuffer
+export default class MultiBuffer
 {
-    constructor( ...buffers )
+    #buffers    : Buffer[];
+    #length     : number;
+
+    constructor( ...buffers: Buffer[] )
     {
-        this._buffers = [];
-        this._length = 0;
-        this._index = null;
+        this.#buffers = [];
+        this.#length = 0;
 
         for( let buffer of buffers )
         {
             if( buffer.length )
             {
-                this._buffers.push( buffer );
-                this._length += buffer.length;
+                this.#buffers.push( buffer );
+                this.#length += buffer.length;
             }
         }
     }
 
-    _getRange( start, end = 0 )
+    #getRange( start: number, end: number = 0 )
     {
-        let head = start, buffers = this._buffers, range = { buffers: [], start: undefined, end: undefined, index: 0, length: 0 }, i = 0, length = end - start;
+        let head = start, buffers = this.#buffers, i = 0, length = end - start;
+        let range: { buffers: Buffer[], start: number, end: number, index: number, length: number } = { buffers: [], start: 0, end: 0, index: 0, length: 0 };
 
         if( buffers.length )
         {
@@ -50,10 +51,10 @@ module.exports = class MultiBuffer
 
             if( range.start !== undefined && end !== 0 )
             {
-                if( end >= this._length )
+                if( end >= this.#length )
                 {
-                    range.buffers = this._buffers.slice( range.index );
-                    range.length = this._length - head;
+                    range.buffers = this.#buffers.slice( range.index );
+                    range.length = this.#length - head;
                     range.end = range.buffers[range.buffers.length - 1].length;
 
                     if( start > 0 )
@@ -95,17 +96,17 @@ module.exports = class MultiBuffer
 
             if( range.buffers.length === 1 && ( range.start !== 0 || range.end !== range.buffers[0].length ))
             {
-                range.buffers[0] = range.buffers[0].slice( range.start, range.end );
+                range.buffers[0] = range.buffers[0].subarray( range.start, range.end );
             }
             else if( range.buffers.length > 1 )
             {
                 if( range.start !== 0 )
                 {
-                    range.buffers[0] = range.buffers[0].slice( range.start );
+                    range.buffers[0] = range.buffers[0].subarray( range.start );
                 }
                 if( range.end !== range.buffers[range.buffers.length-1].length )
                 {
-                    range.buffers[range.buffers.length-1] = range.buffers[range.buffers.length-1].slice( 0, range.end );
+                    range.buffers[range.buffers.length-1] = range.buffers[range.buffers.length-1].subarray( 0, range.end );
                 }
             }
         }
@@ -113,51 +114,43 @@ module.exports = class MultiBuffer
         return range;
     }
 
-    append( ...buffers )
+    append( ...buffers: Buffer[] )
     {
         for( let buffer of buffers )
         {
             if( buffer.length )
             {
-                this._buffers.push( buffer );
-                this._length += buffer.length;
+                this.#buffers.push( buffer );
+                this.#length += buffer.length;
             }
         }
     }
 
-    slice( start, end )
+    slice( start?: number, end?: number )
     {
         if( start === undefined ){ start = 0; }
-        if( start < 0 ){ start = this._length + start; }
-        if( end === undefined ){ end = this._length; }
-        if( end < 0 ){ end = this._length + end; }
+        if( start < 0 ){ start = this.#length + start; }
+        if( end === undefined ){ end = this.#length; }
+        if( end < 0 ){ end = this.#length + end; }
 
-        end = Math.min( this._length, end );
+        end = Math.min( this.#length, end );
 
-        return start < end ? this._getRange( start, end ).buffers : [];
+        return start < end ? this.#getRange( start, end ).buffers : [];
     }
 
-    splice( start, deleteCount, ...buffers )
+    splice( start: number = 0, deleteCount: number = 0, ...buffers: Buffer[] )
     {
-        if( deleteCount && typeof deleteCount !== 'number' )
-        {
-            buffers.unshift( deleteCount );
-            deleteCount = 0;
-        }
-
-        if( start === undefined ){ start = 0; }
-        if( start < 0 ){ start = this._length + start; }
-        let end = deleteCount < 0 ? this._length + deleteCount : start + deleteCount;
-        let range = this._getRange( start, end ), spliceStart;
+        if( start < 0 ){ start = this.#length + start; }
+        let end = deleteCount < 0 ? this.#length + deleteCount : start + deleteCount;
+        let range = this.#getRange( start, end ), spliceStart;
 
         if( range.buffers.length && start !== end )
         {
-            this._index = null;
-            this._length -= range.length;
+            this.#length -= range.length;
 
-            if( this._length === 0 )
+            if( this.#length === 0 )
             {
-                this._buffers = [];
+                this.#buffers = [];
             }
             else
             {
@@ -167,25 +160,25 @@ module.exports = class MultiBuffer
                 {
                     if( range.start === 0 )
                     {
-                        if( range.end === this._buffers[range.index].length )
+                        if( range.end === this.#buffers[range.index].length )
                         {
-                            this._buffers.splice( range.index, 1 );
+                            this.#buffers.splice( range.index, 1 );
                         }
                         else
                         {
-                            this._buffers[range.index] = this._buffers[range.index].slice( range.end );
+                            this.#buffers[range.index] = this.#buffers[range.index].subarray( range.end );
                         }
                     }
-                    else if( range.end === this._buffers[range.index].length )
+                    else if( range.end === this.#buffers[range.index].length )
                     {
-                        this._buffers[range.index] = this._buffers[range.index].slice( 0, range.start );
+                        this.#buffers[range.index] = this.#buffers[range.index].subarray( 0, range.start );
                     }
                     else
                     {
-                        let tail = this._buffers[range.index].slice( range.end );
+                        let tail = this.#buffers[range.index].subarray( range.end );
 
-                        this._buffers[range.index] = this._buffers[range.index].slice( 0, range.start );
-                        this._buffers.splice( range.index + 1, 0, tail );
+                        this.#buffers[range.index] = this.#buffers[range.index].subarray( 0, range.start );
+                        this.#buffers.splice( range.index + 1, 0, tail );
                     }
                 }
                 else
@@ -197,21 +190,21 @@ module.exports = class MultiBuffer
                     else
                     {
                         spliceStart = range.index + 1;
-                        this._buffers[range.index] = this._buffers[range.index].slice( 0, range.start );
+                        this.#buffers[range.index] = this.#buffers[range.index].slice( 0, range.start );
                     }
 
-                    if( range.end === this._buffers[range.index + range.buffers.length - 1].length )
+                    if( range.end === this.#buffers[range.index + range.buffers.length - 1].length )
                     {
                         ++spliceCount;
                     }
                     else
                     {
-                        this._buffers[range.index + range.buffers.length - 1] = this._buffers[range.index + range.buffers.length - 1].slice( range.end );
+                        this.#buffers[range.index + range.buffers.length - 1] = this.#buffers[range.index + range.buffers.length - 1].slice( range.end );
                     }
 
                     if( spliceCount )
                     {
-                        this._buffers.splice( spliceStart, spliceCount );
+                        this.#buffers.splice( spliceStart, spliceCount );
                     }
                 }
             }
@@ -219,35 +212,34 @@ module.exports = class MultiBuffer
 
         if( buffers.length )
         {
-            this._index = null;
-            this._length += buffers.reduce(( s, b ) => s += b.length, 0 );
+            this.#length += buffers.reduce(( s, b ) => s += b.length, 0 );
 
             if( range.buffers.length === 0 )
             {
-                range.index = this._buffers.length;
+                range.index = this.#buffers.length;
             }
             else if( range.start !== 0 )
             {
-                if( range.start < this._buffers[range.index].length )
+                if( range.start < this.#buffers[range.index].length )
                 {
-                    let tail = this._buffers[range.index].slice( range.start );
+                    let tail = this.#buffers[range.index].slice( range.start );
 
-                    this._buffers[range.index] = this._buffers[range.index].slice( 0, range.start );
+                    this.#buffers[range.index] = this.#buffers[range.index].slice( 0, range.start );
                     buffers.push( tail );
                 }
 
                 ++range.index;
             }
 
-            this._buffers.splice( range.index, 0, ...buffers );
+            this.#buffers.splice( range.index, 0, ...buffers );
         }
 
         return ( start !== end ) ? range.buffers : [];
     }
 
-    spliceConcat( ...args )
+    spliceConcat( start: number, deleteCount: number, ...buffers: Buffer[] )
     {
-        let buffers = this.splice( ...args );
+        buffers = this.splice( start, deleteCount, ...buffers );
 
         return buffers.length ? ( buffers.length === 1 ? buffers[0] : Buffer.concat( buffers )) : Buffer.alloc(0);
     }
@@ -257,27 +249,27 @@ module.exports = class MultiBuffer
 
     }*/
 
-    get( index )
+    get( index: number )
     {
-        if( index < 0 ){ index = this._length + index; }
+        if( index < 0 ){ index = this.#length + index; }
 
-        let range = this._getRange( index );
+        let range = this.#getRange( index );
 
         return range.buffers.length ? range.buffers[0][0] : undefined;
     }
 
-    set( index, value )
+    set( index: number, value: Buffer )
     {
-        if( index < 0 ){ index = this._length + index; }
+        if( index < 0 ){ index = this.#length + index; }
 
-        let range = this._getRange( index );
+        let range = this.#getRange( index );
 
         return range.buffers[0] = value;
     }
 
-    _equals( buffer, block, index, length )
+    #equals( buffer: Buffer, block: number, index: number, length: number )
     {
-        let buff = this._buffers[block], matched = 0;
+        let buff = this.#buffers[block], matched = 0;
 
         if( buff[index] === buffer[matched] )
         {
@@ -291,7 +283,7 @@ module.exports = class MultiBuffer
                 {
                     if( ++index >= buff.length  )
                     {
-                        buff = this._buffers[++block]; index = 0;
+                        buff = this.#buffers[++block]; index = 0;
                     }
                 }
             }
@@ -301,29 +293,27 @@ module.exports = class MultiBuffer
         return false;
     }
 
-    equals( buffer, offset = 0, length = Infinity )
+    equals( buffer: Buffer, offset = 0, length = Infinity )
     {
         length = Math.min( length, buffer.length );
 
-        if( offset + length <= this._length )
+        if( offset + length <= this.#length )
         {
-            let range = this._getRange( offset );
+            let range = this.#getRange( offset );
 
-            return this._equals( buffer, range.index, range.start, length );
+            return this.#equals( buffer, range.index, range.start, length );
         }
 
         return false;
     }
 
-    indexOf( buffer, offset, encoding )
+    indexOf( buffer: Buffer | string, offset: number = 0, encoding: BufferEncoding = 'utf8' )
     {
-        if( typeof offset === 'string' ){[ offset, encoding ] = [ 0, offset ]}
         if( typeof buffer === 'string' ){ buffer = Buffer.from( buffer, encoding ); }
-        if( !offset ){ offset = 0; }
-        //if( offset < 0 ){ offset = this._length - offset; }
-        if( buffer.length === 0 ){ return offset < this._length ? offset : -1; }
+        if( offset < 0 ){ offset = this.#length - offset; }
+        if( buffer.length === 0 ){ return offset < this.#length ? offset : -1; }
 
-        let b = 0, buff = this._buffers[0], i = 0, index = 0, until = this._length - buffer.length;
+        let b = 0, buff = this.#buffers[0], i = 0, index = 0, until = this.#length - buffer.length;
 
         while( index <= until && index < offset )
         {
@@ -331,7 +321,7 @@ module.exports = class MultiBuffer
             {
                 i = offset - index; index = offset;
             }
-            else{ index += buff.length; buff = this._buffers[++b]; }
+            else{ index += buff.length; buff = this.#buffers[++b]; }
         }
 
         while( index <= until )
@@ -353,7 +343,7 @@ module.exports = class MultiBuffer
 
             while( index <= until && i < buff.length )
             {
-                if( this._equals( buffer, b, i, buffer.length ))
+                if( this.#equals( buffer, b, i, buffer.length ))
                 {
                     return index;
                 }
@@ -361,27 +351,25 @@ module.exports = class MultiBuffer
                 ++i; ++index;
             }
 
-            buff = this._buffers[++b]; i = 0;
+            buff = this.#buffers[++b]; i = 0;
         }
 
         return -1;
     }
 
-    partialIndexOf( buffer, offset, encoding )
+    partialIndexOf( buffer: Buffer | string, offset: number = 0, encoding: BufferEncoding = 'utf8' )
     {
-        if( typeof offset === 'string' ){[ offset, encoding ] = [ 0, offset ]}
         if( typeof buffer === 'string' ){ buffer = Buffer.from( buffer, encoding ); }
-        if( !offset ){ offset = 0; }
-
+        
         let indexOf = this.indexOf( buffer, offset, encoding );
 
         if( indexOf === -1 )
         {
-            for( let length = Math.min( buffer.length - 1, this._length ); length > 0; --length )
+            for( let length = Math.min( buffer.length - 1, this.#length ); length > 0; --length )
             {
-                if( this.equals( buffer, this._length - length, length ))
+                if( this.equals( buffer, this.#length - length, length ))
                 {
-                    return this._length - length;
+                    return this.#length - length;
                 }
             }
         }
@@ -391,13 +379,12 @@ module.exports = class MultiBuffer
 
     get length()
     {
-        return this._length;
+        return this.#length;
     }
 
     clear()
     {
-        this._buffers = [];
-        this._length = 0;
-        this._index = null;
+        this.#buffers = [];
+        this.#length = 0;
     }
 }

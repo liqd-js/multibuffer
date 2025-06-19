@@ -1,32 +1,35 @@
 {
-  "name": "@liqd-js/multibuffer",
-  "description": "MultiBuffer class",
-  "version": "1.1.0",
-  "author": "radixxko",
-  "license": "MIT",
-  "main": "lib/multibuffer.js",
-  "homepage" : "https://liqd-js.com/lib/multibuffer",
-  "files": [
-    "lib/"
-  ],
-  "scripts": {
-    "test": "nyc mocha",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/liqd-js/multibuffer.git"
-  },
-  "keywords": [
-    "multibuffer",
-    "buffer",
-    "liqd-js",
-    "liqd"
-  ],
-  "dependencies": {},
-  "devDependencies": {
-    "coveralls": "^3.0.4",
-    "mocha": "^5.0.4",
-    "nyc": "^14.1.1"
-  }
+    "name": "@liqd-js/multibuffer",
+    "description": "MultiBuffer class",
+    "version": "2.0.0",
+    "author": "radixxko",
+    "license": "MIT",
+    "homepage" : "https://liqd-js.com/lib/multibuffer",
+    "main": "dist/multibuffer.js",
+    "types": "dist/multibuffer.d.ts",
+    "files": [
+        "dist/**/*"
+    ],
+    "scripts": 
+    {
+        "clean": "rm -rf dist package-lock.json node_modules && npm i",
+        "build": "npm run clean && tsc",
+        "version": "git pull && npm run build && npm publish && npm run commit && git push",
+        "commit": "node -e \"const version = require('./package.json').version.trim(); require('child_process').execSync('git add . && git commit -m \\\"Version ' + version + '\\\"');\""
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/liqd-js/multibuffer.git"
+    },
+    "keywords": [
+        "multibuffer",
+        "buffer",
+        "liqd-js",
+        "liqd"
+    ],
+    "dependencies": {},
+    "devDependencies": {
+        "@types/node": "^24.0.3",
+        "typescript": "^5.8.3"
+    }
 }
